@@ -10,12 +10,14 @@ BUILDDIR=bin
 SOURCES=TEST.c
 SOURCES+=setup.c
 SOURCES+=startup_gcc.c
+SOURCES+=ISR.c
 
 
+INCLUDEDIRS=-I./
 #objects from the C files
 OBJECTS=$(SOURCES:.c=.o)
-
-#DUMMY FILES
+VERBOSE=""
+#DUMMY FILESROM_FPULazyStackingEnable
 DUMMYFILES=$(SOURCES:.c=.d)
 
 #Define Compiler, linker, archiver, etc.
@@ -38,6 +40,8 @@ AFLAGS=-mthumb \
        ${FPU}  \
        -MD
 
+LIBRARIES=./driverlib/gcc-cm4f/libdriver-cm4f.a
+
 #
 # The flags passed to the compiler.
 #
@@ -52,6 +56,7 @@ CFLAGS=-mthumb             \
        -Wall               \
        -pedantic           \
        -DPART_${PART}      \
+       -I./								 \
 
 #Locate gcc libraries
 LIBGCC=${shell ${CC} ${CFLAGS} -print-libgcc-file-name}
@@ -67,9 +72,9 @@ ${BUILDDIR}${SUFFIX}/%.o: %.c
 	 then                                                 \
 	     echo "  CC    ${<}";                             \
 	 else                                                 \
-	     echo ${CC} ${CFLAGS} -D${BUILDDIR} -o ${@} ${<}; \
+	     echo ${CC} ${INCLUDEDIRS} ${CFLAGS} -D${BUILDDIR} -o ${@} ${<}; \
 	 fi
-	@${CC} ${CFLAGS} -D${BUILDDIR} -o ${@} ${<}
+	@${CC} ${INCLUDEDIRS} ${CFLAGS} -D${BUILDDIR} -o ${@} ${<}
 ifneq ($(findstring CYGWIN, ${os}), )
 	@sed -i -r 's/ ([A-Za-z]):/ \/cygdrive\/\1/g' ${@:.o=.d}
 endif
@@ -82,9 +87,9 @@ ${BUILDDIR}${SUFFIX}/%.o: %.S
 	 then                                                    \
 	     echo "  AS    ${<}";                                \
 	 else                                                    \
-	     echo ${CC} ${AFLAGS} -D${BUILDDIR} -o ${@} -c ${<}; \
+	     echo ${CC} ${AFLAGS} ${INCLUDEDIRS} -D${BUILDDIR} -o ${@} -c ${<}; \
 	 fi
-	@${CC} ${AFLAGS} -D${BUILDDIR} -o ${@} -c ${<}
+	@${CC} ${AFLAGS} ${INCLUDEDIRS} -D${BUILDDIR} -o ${@} -c ${<}
 ifneq ($(findstring CYGWIN, ${os}), )
 	@sed -i -r 's/ ([A-Za-z]):/ \/cygdrive\/\1/g' ${@:.o=.d}
 endif
@@ -120,13 +125,13 @@ ${BUILDDIR}${SUFFIX}/%.axf:
 	          --entry ${ENTRY_${notdir ${@:.axf=}}}                       \
 	          ${LDFLAGSgcc_${notdir ${@:.axf=}}}                          \
 	          ${LDFLAGS} -o ${@} $(filter %.o %.a, ${^})                  \
-	          '${LIBM}' '${LIBC}' '${LIBGCC}';                            \
+	          '${LIBRARIES}' '${LIBM}' '${LIBC}' '${LIBGCC}' ;                            \
 	 fi;                                                                  \
 	${LD} -T $${ldname}                                                   \
 	      --entry ${ENTRY_${notdir ${@:.axf=}}}                           \
 	      ${LDFLAGSgcc_${notdir ${@:.axf=}}}                              \
 	      ${LDFLAGS} -o ${@} $(filter %.o %.a, ${^})                      \
-	      '${LIBM}' '${LIBC}' '${LIBGCC}'
+	      '${LIBRARIES}' '${LIBM}' '${LIBC}' '${LIBGCC}'
 	@${OBJCOPY} -O binary ${@} ${@:.axf=.bin}
 #endif
 
@@ -154,6 +159,7 @@ ${BUILDDIR}:
 # Rules for building the blinky example.
 #
 ${BUILDDIR}/${PROJECT}.axf: ${OBJECTS}
+${BUILDDIR}/${PROJECT}.axf: ${LIBRARIES}
 ${BUILDDIR}/${PROJECT}.axf: ${PROJECT}.ld
 SCATTERgcc_${PROJECT}=${PROJECT}.ld
 ENTRY_${PROJECT}=ResetISR

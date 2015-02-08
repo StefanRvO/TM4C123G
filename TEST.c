@@ -5,20 +5,25 @@
 #include <stdint.h>
 #include "inc/tm4c123gh6pm.h"
 #include "headers/setup.h"
+void Timer0IntHandler()
+{
+
+}
+
+void Timer1IntHandler()
+{
+
+} 
 
 int main(void)
 /***************************************************************************
 * Function : LED follows SWITCH
 ***************************************************************************/
 {
-setup();
-while(1)
-{
-if (GPIO_PORTF_DATA_R & 0x10)
-GPIO_PORTF_DATA_R &= ~(0x02);
-else
-GPIO_PORTF_DATA_R |= 0x02;
-}
-return (0);
+	setup_();
+	while(1)
+	{	
+	}
+	return (0);
 }
 /****************************** End of module ******************************/
