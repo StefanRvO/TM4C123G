@@ -2,7 +2,7 @@
 //
 // startup_gcc.c - Startup code for use with GNU tools.
 //
-// Copyright (c) 2012 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2011-2014 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,10 +18,11 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 9453 of the EK-LM4F120XL Firmware Package.
+// This is part of revision 2.1.0.12573 of the DK-TM4C123G Firmware Package.
 //
 //*****************************************************************************
 
+#include <stdint.h>
 #include "inc/hw_nvic.h"
 #include "inc/hw_types.h"
 
@@ -35,9 +36,13 @@ static void NmiSR(void);
 static void FaultISR(void);
 static void IntDefaultHandler(void);
 
-extern void onButtonDown();
-extern void Timer0IntHandler(void);
-extern void Timer1IntHandler(void);
+//*****************************************************************************
+//
+// External declarations for the interrupt handlers used by the application.
+//
+//*****************************************************************************
+extern void onButtonDown(void);
+
 //*****************************************************************************
 //
 // The entry point for the application.
@@ -50,7 +55,7 @@ extern int main(void);
 // Reserve space for the system stack.
 //
 //*****************************************************************************
-static unsigned long pulStack[64];
+static uint32_t pui32Stack[256];
 
 //*****************************************************************************
 //
@@ -61,7 +66,7 @@ static unsigned long pulStack[64];
 __attribute__ ((section(".isr_vector")))
 void (* const g_pfnVectors[])(void) =
 {
-    (void (*)(void))((unsigned long)pulStack + sizeof(pulStack)),
+    (void (*)(void))((uint32_t)pui32Stack + sizeof(pui32Stack)),
                                             // The initial stack pointer
     ResetISR,                               // The reset handler
     NmiSR,                                  // The NMI handler
@@ -97,9 +102,9 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // ADC Sequence 2
     IntDefaultHandler,                      // ADC Sequence 3
     IntDefaultHandler,                      // Watchdog timer
-    Timer0IntHandler,                      // Timer 0 subtimer A
+    IntDefaultHandler,                      // Timer 0 subtimer A
     IntDefaultHandler,                      // Timer 0 subtimer B
-    Timer1IntHandler,                      // Timer 1 subtimer A
+    IntDefaultHandler,                      // Timer 1 subtimer A
     IntDefaultHandler,                      // Timer 1 subtimer B
     IntDefaultHandler,                      // Timer 2 subtimer A
     IntDefaultHandler,                      // Timer 2 subtimer B
@@ -108,7 +113,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // Analog Comparator 2
     IntDefaultHandler,                      // System Control (PLL, OSC, BO)
     IntDefaultHandler,                      // FLASH Control
-    onButtonDown,          					            // GPIO Port F
+    onButtonDown,                      			// GPIO Port F
     IntDefaultHandler,                      // GPIO Port G
     IntDefaultHandler,                      // GPIO Port H
     IntDefaultHandler,                      // UART2 Rx and Tx
@@ -119,8 +124,8 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // Quadrature Encoder 1
     IntDefaultHandler,                      // CAN0
     IntDefaultHandler,                      // CAN1
-    IntDefaultHandler,                      // CAN2
-    IntDefaultHandler,                      // Ethernet
+    0,                                      // Reserved
+    0,                                      // Reserved
     IntDefaultHandler,                      // Hibernate
     IntDefaultHandler,                      // USB0
     IntDefaultHandler,                      // PWM Generator 3
@@ -130,8 +135,8 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // ADC1 Sequence 1
     IntDefaultHandler,                      // ADC1 Sequence 2
     IntDefaultHandler,                      // ADC1 Sequence 3
-    IntDefaultHandler,                      // I2S0
-    IntDefaultHandler,                      // External Bus Interface 0
+    0,                                      // Reserved
+    0,                                      // Reserved
     IntDefaultHandler,                      // GPIO Port J
     IntDefaultHandler,                      // GPIO Port K
     IntDefaultHandler,                      // GPIO Port L
@@ -150,7 +155,6 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // I2C3 Master and Slave
     IntDefaultHandler,                      // Timer 4 subtimer A
     IntDefaultHandler,                      // Timer 4 subtimer B
-
     0,                                      // Reserved
     0,                                      // Reserved
     0,                                      // Reserved
@@ -186,14 +190,14 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // Wide Timer 5 subtimer A
     IntDefaultHandler,                      // Wide Timer 5 subtimer B
     IntDefaultHandler,                      // FPU
-    IntDefaultHandler,                      // PECI 0
-    IntDefaultHandler,                      // LPC 0
+    0,                                      // Reserved
+    0,                                      // Reserved
     IntDefaultHandler,                      // I2C4 Master and Slave
     IntDefaultHandler,                      // I2C5 Master and Slave
     IntDefaultHandler,                      // GPIO Port M
     IntDefaultHandler,                      // GPIO Port N
     IntDefaultHandler,                      // Quadrature Encoder 2
-    IntDefaultHandler,                      // Fan 0
+    0,                                      // Reserved
     0,                                      // Reserved
     IntDefaultHandler,                      // GPIO Port P (Summary or P0)
     IntDefaultHandler,                      // GPIO Port P1
@@ -227,11 +231,11 @@ void (* const g_pfnVectors[])(void) =
 // for the "data" segment resides immediately following the "text" segment.
 //
 //*****************************************************************************
-extern unsigned long _etext;
-extern unsigned long _data;
-extern unsigned long _edata;
-extern unsigned long _bss;
-extern unsigned long _ebss;
+extern uint32_t _etext;
+extern uint32_t _data;
+extern uint32_t _edata;
+extern uint32_t _bss;
+extern uint32_t _ebss;
 
 //*****************************************************************************
 //
@@ -246,15 +250,15 @@ extern unsigned long _ebss;
 void
 ResetISR(void)
 {
-    unsigned long *pulSrc, *pulDest;
+    uint32_t *pui32Src, *pui32Dest;
 
     //
     // Copy the data segment initializers from flash to SRAM.
     //
-    pulSrc = &_etext;
-    for(pulDest = &_data; pulDest < &_edata; )
+    pui32Src = &_etext;
+    for(pui32Dest = &_data; pui32Dest < &_edata; )
     {
-        *pulDest++ = *pulSrc++;
+        *pui32Dest++ = *pui32Src++;
     }
 
     //

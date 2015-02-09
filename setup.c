@@ -23,11 +23,11 @@ void setup_()
 	//Do a dummy read to insert a few cycles after enabling peripheral.
 	dummy = SYSCTL_RCGC2_R;
 
-	//Set the direction as output (PF2).
-	GPIO_PORTF_DIR_R = 0b1000;
+	//Set the direction as output (PF1,2,3).
+	GPIO_PORTF_DIR_R |= 0b1110 ;
 
-	//Enable the GPIO pins for digital function (PF4 and PF2).
-	GPIO_PORTF_DEN_R = 0b1000;
+	//Enable the GPIO pins for digital function (PF1,2,3,4).
+	GPIO_PORTF_DEN_R |= 0b11110;
   SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);        // Enable port F
   GPIOPinTypeGPIOInput(GPIO_PORTF_BASE, GPIO_PIN_4);  // Init PF4 as input
 
